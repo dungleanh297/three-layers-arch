@@ -1,6 +1,6 @@
 namespace HotelReservation.Domain.Entities;
 
-public class Reservation 
+public class Reservation
 {
     public int Id { get; set; }
 
