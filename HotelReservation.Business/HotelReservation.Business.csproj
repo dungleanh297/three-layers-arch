@@ -7,7 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Enums/" />
+    <ProjectReference Include="../HotelReservation.Business.Abstraction/HotelReservation.Business.Abstraction.csproj" />
+    <ProjectReference Include="../HotelReservation.Repository/HotelReservation.Repository.csproj" />
   </ItemGroup>
 
 </Project>

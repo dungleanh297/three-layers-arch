@@ -1,6 +1,8 @@
-namespace HotelReservation.Domain.Entities;
+using System;
 
-public class Room
+namespace HotelReservation.Business;
+
+public class RoomDTO
 {
     public int Id { get; set; }
 

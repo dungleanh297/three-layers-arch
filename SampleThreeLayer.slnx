@@ -4,6 +4,8 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Project Path="HotelReservation.Business.Abstraction/HotelReservation.Business.Abstraction.csproj" />
+  <Project Path="HotelReservation.Business/HotelReservation.Business.csproj" />
   <Project Path="HotelReservation.Domain/HotelReservation.Domain.csproj" />
   <Project Path="HotelReservation.Repository/HotelReservation.Repository.csproj" />
   <Project Path="HotelReservation.Web/HotelReservation.Web.csproj" />
