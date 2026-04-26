@@ -8,5 +8,5 @@ public interface IReservationService
 
     Task PlaceReservation(PlaceReservationRequest request);
 
-    Task UpdateReservationStatus(int reservationId, ReservationStatus status);
+    Task UpdateReservationStatus(PutReservationStatusRequest request);
 }

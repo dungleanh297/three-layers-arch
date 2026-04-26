@@ -2,27 +2,25 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HotelReservation.Business;
 
+[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 public class DateInTheFutureAttribute : ValidationAttribute
 {
-    public override bool IsValid(object? value)
-    {
-        if (value == null)
-        {
-            return true;
-        }
+    private static readonly ValidationResult s_invalidResult = new ValidationResult("The date must be the date in the future, not today or in the past.");
 
+    protected override ValidationResult? IsValid(object? value, ValidationContext context)
+    {
         if (value is not DateTime dateTime)
         {
-            return false;
+            return ValidationResult.Success;
         }
 
         var tomorrow = DateTime.UtcNow;
         
-        return dateTime.Date >= tomorrow;
-    }
+        if (dateTime.Date >= tomorrow)
+        {
+            return ValidationResult.Success;
+        }
 
-    public override string FormatErrorMessage(string name)
-    {
-        return base.FormatErrorMessage(name) ?? $"The field {name} must be at least the next day.";
+        return s_invalidResult;
     }
 }

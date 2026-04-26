@@ -1,14 +1,12 @@
-﻿using HotelReservation.Business;
-
-namespace HotelReservation.Business;
+﻿namespace HotelReservation.Business;
 
 public interface ICustomerService
 {
     Task<List<CustomerDTO>> GetAsync(CustomerSearchCriteria? criteria = null);
 
-    Task CreateAsync(CustomerDTO customerDTO);
+    Task CreateAsync(PutCustomerRequest customerDTO);
 
-    Task UpdateAsync(CustomerDTO customerDTO);
+    Task UpdateAsync(int id, PutCustomerRequest customerDTO);
 
     Task DeleteAsync(int id);
 

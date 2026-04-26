@@ -2,15 +2,17 @@ namespace HotelReservation.Business;
 
 public class ReservationSearchCriteria
 {
-    public int? CustomerId { get; init; }
+    public int? CustomerId { get; set; }
 
-    public DateTime? ReservationDateStartRange { get; init; }
+    public DateTime? ReservationDateStartRange { get; set; }
 
-    public DateTime? ReservationDateEndRange { get; init; }
+    [GreaterThanOrEqualsTo(Property = nameof(ReservationDateStartRange))]
+    public DateTime? ReservationDateEndRange { get; set; }
 
-    public DateTime? CheckoutDateStartRange { get; init; }
+    public DateTime? CheckoutDateStartRange { get; set; }
 
-    public DateTime? CheckoutDateEndRange { get; init; }
+    [GreaterThanOrEqualsTo(Property = nameof(ReservationDateStartRange))]
+    public DateTime? CheckoutDateEndRange { get; set; }
 
     public Pagination Pagination { get; set; } = Pagination.DefaultPagination;
 }

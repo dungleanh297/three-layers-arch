@@ -1,5 +1,3 @@
-using System;
-
 namespace HotelReservation.Business;
 
 public class ResourceNotFoundException : Exception

@@ -2,7 +2,7 @@ using HotelReservation.Domain.Entities;
 using HotelReservation.Repository;
 using Microsoft.EntityFrameworkCore;
 
-namespace HotelReservation.Business.Services;
+namespace HotelReservation.Business;
 
 internal class CustomerService : ICustomerService
 {
@@ -15,28 +15,28 @@ internal class CustomerService : ICustomerService
 
     public async Task<List<CustomerDTO>> GetAsync(CustomerSearchCriteria? criteria = null)
     {
-        var query = _context.Customers.AsQueryable();
+        var query = _context.Customers.AsNoTracking();
 
         if (criteria != null)
         {
             if (!string.IsNullOrWhiteSpace(criteria.Name))
             {
-                query = query.Where(c => c.Name.Contains(criteria.Name));
+                query = query.Where(c => EF.Functions.Like(c.Name, criteria.Name));
             }
 
             if (!string.IsNullOrWhiteSpace(criteria.Email))
             {
-                query = query.Where(c => c.Email.Contains(criteria.Email));
+                query = query.Where(c => EF.Functions.Like(c.Email, criteria.Email));
             }
 
             if (!string.IsNullOrWhiteSpace(criteria.PhoneNumber))
             {
-                query = query.Where(c => c.PhoneNumber.Contains(criteria.PhoneNumber));
+                query = query.Where(c => EF.Functions.Like(c.PhoneNumber, criteria.PhoneNumber));
             }
 
             if (!string.IsNullOrWhiteSpace(criteria.SocietyCardNumber))
             {
-                query = query.Where(c => c.SocietyCardNumber.Contains(criteria.SocietyCardNumber));
+                query = query.Where(c => EF.Functions.Like(c.SocietyCardNumber, criteria.SocietyCardNumber));
             }
         }
 
@@ -54,34 +54,33 @@ internal class CustomerService : ICustomerService
         return customers;
     }
 
-    public async Task CreateAsync(CustomerDTO customerDTO)
+    public async Task CreateAsync(PutCustomerRequest request)
     {
         var customer = new Customer
         {
-            Name = customerDTO.Name,
-            Email = customerDTO.Email,
-            PhoneNumber = customerDTO.PhoneNumber,
-            SocietyCardNumber = customerDTO.SocietyCardNumber
+            Name = request.Name,
+            Email = request.Email,
+            PhoneNumber = request.PhoneNumber,
+            SocietyCardNumber = request.SocietyCardNumber
         };
 
         _context.Customers.Add(customer);
         await _context.SaveChangesAsync();
     }
 
-    public async Task UpdateAsync(CustomerDTO customerDTO)
+    public async Task UpdateAsync(int id, PutCustomerRequest request)
     {
-        var customer = await _context.Customers.FindAsync(customerDTO.Id);
+        var customer = await _context.Customers.FindAsync(id);
 
         if (customer == null)
         {
             throw new ResourceNotFoundException();
         }
 
-        // Manual mapping from CustomerDTO to Customer entity
-        customer.Name = customerDTO.Name;
-        customer.Email = customerDTO.Email;
-        customer.PhoneNumber = customerDTO.PhoneNumber;
-        customer.SocietyCardNumber = customerDTO.SocietyCardNumber;
+        customer.Name = request.Name;
+        customer.Email = request.Email;
+        customer.PhoneNumber = request.PhoneNumber;
+        customer.SocietyCardNumber = request.SocietyCardNumber;
 
         _context.Customers.Update(customer);
         await _context.SaveChangesAsync();

@@ -1,16 +1,14 @@
 namespace HotelReservation.Business;
 
-public abstract class BusinessException : Exception
+public class BusinessException : Exception
 {
-    public int ErrorCode { get; set; }
+    public int ErrorCode { get; }
 
-    public string[] ErrorsProperties { get; set; } = Array.Empty<string>();
+    public string ErrorProperty { get; }
 
-    protected BusinessException() : base()
+    public BusinessException(int errorCode, string errorProperty, string message) : base(message)
     {
-    }
-
-    protected BusinessException(string message) : base(message)
-    {
+        ErrorCode = errorCode;
+        ErrorProperty = errorProperty;
     }
 }

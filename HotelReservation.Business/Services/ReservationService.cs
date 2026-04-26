@@ -3,7 +3,7 @@ using HotelReservation.Domain.Entities;
 using HotelReservation.Repository;
 using Microsoft.EntityFrameworkCore;
 
-namespace HotelReservation.Business.Services;
+namespace HotelReservation.Business;
 
 internal class ReservationService : IReservationService
 {
@@ -16,17 +16,15 @@ internal class ReservationService : IReservationService
 
     public async Task<List<ReservationDTO>> GetAsync(ReservationSearchCriteria? searchCriteria = null)
     {
-        var query = _context.Reservations.Include(r => r.Customer).AsQueryable();
+        var query = _context.Reservations.AsNoTracking();
 
         if (searchCriteria != null)
         {
-            // Filter by CustomerId if provided
             if (searchCriteria.CustomerId.HasValue)
             {
                 query = query.Where(r => r.CustomerId == searchCriteria.CustomerId.Value);
             }
 
-            // Filter by reservation date range if provided
             if (searchCriteria.ReservationDateStartRange.HasValue)
             {
                 query = query.Where(r => r.CheckInDate >= searchCriteria.ReservationDateStartRange.Value);
@@ -37,7 +35,6 @@ internal class ReservationService : IReservationService
                 query = query.Where(r => r.CheckInDate <= searchCriteria.ReservationDateEndRange.Value);
             }
 
-            // Filter by checkout date range if provided
             if (searchCriteria.CheckoutDateStartRange.HasValue)
             {
                 query = query.Where(r => r.ExpectedCheckOutDate >= searchCriteria.CheckoutDateStartRange.Value);
@@ -58,7 +55,8 @@ internal class ReservationService : IReservationService
             CheckInDate = e.CheckInDate,
             ExpectedCheckOutDate = e.ExpectedCheckOutDate,
             ActualCheckOutDate = e.ActualCheckOutDate,
-            RoomPrice = e.RoomPrice
+            RoomPrice = e.RoomPrice,
+            Status = e.Status
         }).ToListAsync();
 
         return reservations;
@@ -82,7 +80,7 @@ internal class ReservationService : IReservationService
 
         if (room.HasBeenTaken)
         {
-            throw new RoomHasBeenPlacedException();
+            throw new BusinessException(ErrorCodes.RoomHasBeenTaken, nameof(PlaceReservationRequest.RoomId), "Room has been taken");
         }
 
         using var transaction = await _context.Database.BeginTransactionAsync();
@@ -107,33 +105,32 @@ internal class ReservationService : IReservationService
         await transaction.CommitAsync();
     }
 
-    public async Task UpdateReservationStatus(int reservationId, ReservationStatus status)
+    public async Task UpdateReservationStatus(PutReservationStatusRequest request)
     {
-        var reservation = await _context.Reservations.Include(r => r.Room).FirstOrDefaultAsync(r => r.Id == reservationId);
+        var reservation = await _context.Reservations.Include(r => r.Room).FirstOrDefaultAsync(r => r.Id == request.ReservationId);
 
         if (reservation == null)
         {
-            throw new ResourceNotFoundException($"Reservation with id {reservationId} not found.");
+            throw new ResourceNotFoundException($"Reservation with id {request.ReservationId} not found.");
         }
 
         var currentStatus = (ReservationStatus)(int)reservation.Status;
 
         if (currentStatus == ReservationStatus.Cancelled || currentStatus == ReservationStatus.CheckedOut)
         {
-            throw new InvalidReservationStatusException("Cannot update reservation status when it is already cancelled or checked out.");
+            throw new BusinessException(ErrorCodes.InvalidReservationStatus, nameof(PutReservationStatusRequest.Status), "Cannot update reservation status when it is already cancelled or checked out.");
         }
 
-        if (currentStatus == ReservationStatus.CheckedIn && status == ReservationStatus.NotArrived)
+        if (currentStatus == ReservationStatus.CheckedIn && request.Status == ReservationStatus.NotArrived)
         {
-            throw new InvalidReservationStatusException("Cannot change status from CheckedIn to NotArrived.");
+            throw new BusinessException(ErrorCodes.InvalidReservationStatus, nameof(PutReservationStatusRequest.Status), "Cannot change status from CheckedIn to NotArrived.");
         }
 
         using var transaction = await _context.Database.BeginTransactionAsync();
 
-        reservation.Status = status;
+        reservation.Status = request.Status;
 
-        // If status is being set to CheckedOut, update room availability and actual checkout date
-        if (status == ReservationStatus.CheckedOut)
+        if (request.Status == ReservationStatus.CheckedOut)
         {
             reservation.Room.HasBeenTaken = false;
             reservation.ActualCheckOutDate = DateTime.UtcNow;

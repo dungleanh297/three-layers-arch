@@ -1,12 +1,12 @@
-namespace HotelReservation.Business.Abstraction;
+namespace HotelReservation.Business;
 
 public interface IRoomService
 {
-    Task<RoomDTO> GetAsync();
+    Task<List<RoomDTO>> GetAsync();
 
-    Task CreateAsync(RoomDTO room);
+    Task CreateAsync(PutRoomInformation room);
 
-    Task UpdateAsync(RoomDTO roomDTO);
+    Task UpdateAsync(int id, PutRoomInformation roomDTO);
 
     Task DeleteAsync(int id);
 }

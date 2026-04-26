@@ -12,7 +12,7 @@ public class HotelReservationDbContext : DbContext
 
     public HotelReservationDbContext(DbContextOptions options) : base(options)
     {
-        
+
     }
 
     public DbSet<Room> Rooms { get; set; }

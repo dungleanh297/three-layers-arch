@@ -1,0 +1,304 @@
+﻿@namespace HotelReservation.Web
+@inject IReservationService ReservationService
+@inject IRoomService RoomService
+@inject ICustomerService CustomerService
+@page "/reservations"
+@using HotelReservation.Domain
+
+<PageTitle>Reservation Management</PageTitle>
+
+<h1>Reservation Management</h1>
+
+@if (reservations == null)
+{
+    <p><em>Loading...</em></p>
+    return;
+}
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="ShowCreateModal">
+        <i class="bi bi-plus-circle"></i> New Reservation
+    </button>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">Search Reservations</h5>
+        <EditForm Model="searchCriteria" OnValidSubmit="SearchReservations">
+            <DataAnnotationsValidator />
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Customer ID</label>
+                    <InputNumber class="form-control" @bind-Value="searchCriteria.CustomerId" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Reservation Date From</label>
+                    <InputDate class="form-control" @bind-Value="searchCriteria.ReservationDateStartRange" />
+                    <ValidationMessage For="() => searchCriteria.ReservationDateStartRange" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Reservation Date To</label>
+                    <InputDate class="form-control" @bind-Value="searchCriteria.ReservationDateEndRange" />
+                    <ValidationMessage For="() => searchCriteria.ReservationDateEndRange" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Checkout Date From</label>
+                    <InputDate class="form-control" @bind-Value="searchCriteria.CheckoutDateStartRange" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Checkout Date To</label>
+                    <InputDate class="form-control" @bind-Value="searchCriteria.CheckoutDateEndRange" />
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-secondary me-2">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="ClearSearch">
+                        Clear
+                    </button>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@if (reservations.Count == 0)
+{
+    <div class="alert alert-info">No reservations found. Click "New Reservation" to create one.</div>
+}
+else
+{
+    <QuickGrid Items="reservations.AsQueryable()" class="table table-striped table-hover">
+        <PropertyColumn Property="r => r.Id" Title="ID" />
+        <PropertyColumn Property="r => r.RoomId" Title="Room ID" />
+        <PropertyColumn Property="r => r.CustomerName" Title="Customer" />
+        <PropertyColumn Property="r => r.CheckInDate" Title="Check-In" Format="d" />
+        <PropertyColumn Property="r => r.ExpectedCheckOutDate" Title="Expected Check-Out" Format="d" />
+        <TemplateColumn Title="Actual Check-Out">
+            @(context.ActualCheckOutDate?.ToString("d") ?? "-")
+        </TemplateColumn>
+        <PropertyColumn Property="r => r.RoomPrice" Title="Room Price" Format="C" />
+        <TemplateColumn Title="Status">
+            <span class="badge @GetStatusBadgeClass(context.Status)">
+                @context.Status
+            </span>
+        </TemplateColumn>
+        <TemplateColumn Title="Actions">
+            <button class="btn btn-sm btn-primary me-2" @onclick="() => ShowStatusModal(context)">
+                Update Status
+            </button>
+        </TemplateColumn>
+    </QuickGrid>
+}
+
+@if (showCreateModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">New Reservation</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
+                </div>
+                <EditForm Model="newReservation" EditContext="editContext" OnValidSubmit="PlaceReservation">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Room</label>
+                            <InputSelect class="form-control" @bind-Value="newReservation.RoomId">
+                                <option value="0">-- Select Room --</option>
+                                @foreach (var room in availableRooms)
+                                {
+                                    <option value="@room.Id">Room @room.RoomNumber - @room.Price.ToString("C")</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => newReservation.RoomId" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Customer</label>
+                            <InputSelect class="form-control" @bind-Value="newReservation.CustomerId">
+                                <option value="0">-- Select Customer --</option>
+                                @foreach (var customer in customers)
+                                {
+                                    <option value="@customer.Id">@customer.Name</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => newReservation.CustomerId" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Guest Has Arrived</label>
+                            <InputCheckbox class="form-check-input" @bind-Value="newReservation.GuestHasArrived" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Expected Check-Out Date</label>
+                            <InputDate class="form-control" @bind-Value="newReservation.ExpectedCheckOutDate" />
+                            <ValidationMessage For="() => newReservation.ExpectedCheckOutDate" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseCreateModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showStatusModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Reservation Status</h5>
+                    <button type="button" class="btn-close" @onclick="CloseStatusModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Reservation ID: <strong>@selectedReservation?.Id</strong></p>
+                    <p>Customer: <strong>@selectedReservation?.CustomerName</strong></p>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" @bind="statusRequest.Status">
+                            <option value="@ReservationStatus.NotArrived">Not Arrived</option>
+                            <option value="@ReservationStatus.CheckedIn">Checked In</option>
+                            <option value="@ReservationStatus.CheckedOut">Checked Out</option>
+                            <option value="@ReservationStatus.Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseStatusModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="UpdateStatus">Update</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
+}
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success mt-3">@successMessage</div>
+}
+
+@code {
+    private List<ReservationDTO>? reservations;
+    private List<RoomDTO> availableRooms = new();
+    private List<CustomerDTO> customers = new();
+    private bool showCreateModal = false;
+    private bool showStatusModal = false;
+    private ReservationDTO? selectedReservation;
+    private PlaceReservationRequest newReservation = new();
+    private PutReservationStatusRequest statusRequest = new();
+    private string? errorMessage;
+    private string? successMessage;
+    private ReservationSearchCriteria searchCriteria = new();
+    private EditContext? editContext;
+    private BusinessExceptionPopulator? exceptionPopulator;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReservations();
+        await LoadRooms();
+        await LoadCustomers();
+    }
+
+    private async Task LoadReservations()
+    {
+        reservations = await ReservationService.GetAsync(searchCriteria);
+        errorMessage = null;
+    }
+
+    private async Task LoadRooms()
+    {
+        availableRooms = await RoomService.GetAsync();
+    }
+
+    private async Task LoadCustomers()
+    {
+        customers = await CustomerService.GetAsync();
+    }
+
+    private async Task SearchReservations()
+    {
+        await LoadReservations();
+    }
+
+    private async Task ClearSearch()
+    {
+        searchCriteria = new ReservationSearchCriteria();
+        await LoadReservations();
+    }
+
+    private async Task ShowCreateModal()
+    {
+        newReservation = new PlaceReservationRequest
+        {
+            ExpectedCheckOutDate = DateTime.Today.AddDays(1)
+        };
+        editContext = new EditContext(newReservation);
+        exceptionPopulator = new BusinessExceptionPopulator(editContext);
+        errorMessage = null;
+        successMessage = null;
+        showCreateModal = true;
+    }
+
+    private void CloseCreateModal()
+    {
+        showCreateModal = false;
+        newReservation = new PlaceReservationRequest();
+    }
+
+    private void ShowStatusModal(ReservationDTO reservation)
+    {
+        selectedReservation = reservation;
+        statusRequest = new PutReservationStatusRequest
+        {
+            ReservationId = reservation.Id,
+            Status = reservation.Status
+        };
+        errorMessage = null;
+        successMessage = null;
+        showStatusModal = true;
+    }
+
+    private void CloseStatusModal()
+    {
+        showStatusModal = false;
+        selectedReservation = null;
+        statusRequest = new PutReservationStatusRequest();
+    }
+
+    private async Task PlaceReservation()
+    {
+        await ReservationService.PlaceReservation(newReservation);
+        successMessage = "Reservation created successfully!";
+        CloseCreateModal();
+        await LoadReservations();
+    }
+
+    private async Task UpdateStatus()
+    {
+        await ReservationService.UpdateReservationStatus(statusRequest);
+        successMessage = "Reservation status updated successfully!";
+        CloseStatusModal();
+        await LoadReservations();
+    }
+
+    private string GetStatusBadgeClass(ReservationStatus status)
+    {
+        return status switch
+        {
+            ReservationStatus.NotArrived => "bg-warning",
+            ReservationStatus.CheckedIn => "bg-info",
+            ReservationStatus.CheckedOut => "bg-success",
+            ReservationStatus.Cancelled => "bg-secondary",
+            _ => "bg-secondary"
+        };
+    }
+}

@@ -1,3 +1,5 @@
+using HotelReservation.Domain;
+
 namespace HotelReservation.Business;
 
 public class ReservationDTO
@@ -17,4 +19,6 @@ public class ReservationDTO
     public DateTime? ActualCheckOutDate { get; set; }
 
     public decimal RoomPrice { get; set; }
+
+    public ReservationStatus Status { get; set; }
 }

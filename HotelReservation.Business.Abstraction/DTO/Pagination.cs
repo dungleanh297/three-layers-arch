@@ -8,8 +8,8 @@ public class Pagination
 
     public static readonly Pagination DefaultPagination = new Pagination();
 
-    public int StartRecordId { get; init; } = int.MinValue;
+    public int StartRecordId { get; set; } = int.MinValue;
 
     [Range(1, DefaultPaginationSize)]
-    public int Size { get; init; } = DefaultPaginationSize;
+    public int Size { get; set; } = DefaultPaginationSize;
 }
